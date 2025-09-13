@@ -1,247 +1,590 @@
+<!doctype html>
 
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>1XMEGAاسكريبت التفاحة</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap');
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Cairo', sans-serif;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: radial-gradient(circle at center, #1a0000 0%, #000 100%);
-      background-attachment: fixed;
-      overflow-x: hidden;
-    }
-    h1 {
-      margin-top: 20px;
-      font-size: 6vw;
-      color: #ff4c4c;
-      text-shadow: 0 0 12px red;
-    }
-    .game-container {
-      display: flex;
-      flex-direction: row-reverse;
-      margin-top: 5vw;
-      gap: 5vw;
-      padding: 0 4vw;
-      width: 100%;
-      box-sizing: border-box;
-      justify-content: center;
-      align-items: flex-start;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 2vw;
-      width: 90vw;
-      max-width: 400px;
-    }
-    .cell {
-      aspect-ratio: 1 / 1;
-      width: 100%;
-      background-image: url("closed.png");
-      background-size: 70% 70%;
-      background-position: center;
-      background-repeat: no-repeat;
-      border: 1px solid #ff0000;
-      border-radius: 10px;
-      transition: all 0.3s ease;
-      box-shadow: 0 0 4px #ff0000;
-      cursor: pointer;
-    }
-    .cell:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 12px #ff1a1a;
-    }
-    .cell.revealed {
-      background-image: url("apple.png");
-      animation: pop 0.4s ease;
-      box-shadow: 0 0 16px 5px rgba(255, 0, 0, 0.5);
-    }
-    .cell.next {
-      animation: pulse 1s infinite;
-    }
-    @keyframes pop {
-      0% { transform: scale(0.2); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes pulse {
-      0% { box-shadow: 0 0 6px 2px rgba(255, 0, 0, 0.2); }
-      50% { box-shadow: 0 0 14px 6px rgba(255, 0, 0, 0.6); }
-      100% { box-shadow: 0 0 6px 2px rgba(255, 0, 0, 0.2); }
-    }
-    .multipliers {
-      display: grid;
-      grid-template-rows: repeat(10, 1fr);
-      gap: 2vw;
-      height: 100%;
-    }
-    .multiplier {
-      width: 14vw;
-      max-width: 70px;
-      aspect-ratio: 1 / 1;
-      background: linear-gradient(145deg, #330000, #660000);
-      color: #ffcccc;
-      font-size: 3vw;
-      font-weight: bold;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 10px;
-      box-shadow: 0 0 12px #ff0000;
-      text-shadow: 0 0 3px #000;
-    }
-    .buttons {
-      margin-top: 6vw;
-      margin-bottom: 4vw;
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .button {
-      padding: 3vw 8vw;
-      font-size: 4vw;
-      border: none;
-      border-radius: 10px;
-      background: linear-gradient(to right, #ff0000, #b30000);
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 0 14px 3px rgba(255, 0, 0, 0.6);
-      transition: all 0.3s ease;
-    }
-    .button:hover {
-      background: linear-gradient(to right, #ff3333, #cc0000);
-      transform: scale(1.08);
-    }
-    #popup {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0, 0, 0, 0.9);
-      color: white;
-      font-size: 5vw;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      text-align: center;
-      z-index: 9999;
-      display: none;
-    }
-    #popup p {
-      margin: 10px;
-      font-size: 4vw;
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>متنبئ لعبة Apple — محاكاة وتحليل</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1: linear-gradient(135deg,#0f172a 0%, #0b1220 40%, #07102a 100%);
+    --card: rgba(255,255,255,0.06);
+    --glass: rgba(255,255,255,0.04);
+    --accent1: #8b5cf6; /* purple */
+    --accent2: #06b6d4; /* teal */
+    --accent3: #f97316; /* orange */
+    --text: #e6eef8;
+    --muted: rgba(230,238,248,0.7);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;background:var(--bg1);color:var(--text);-webkit-font-smoothing:antialiased}
+  /* particle canvas sits behind everything */
+  #bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;mix-blend-mode:screen;opacity:0.35}
+
+  /* LAYOUT */
+  .wrap{position:relative;z-index:2;max-width:1180px;margin:28px auto;padding:28px;display:grid;grid-template-columns:420px 1fr;gap:20px}
+  header{grid-column:1/-1;display:flex;align-items:center;gap:16px;margin-bottom:6px}
+  .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent1),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:white;box-shadow:0 10px 30px rgba(11,22,40,0.6);transform:rotate(-12deg)}
+  header h1{margin:0;font-size:20px;letter-spacing:0.2px}
+  header p{margin:0;color:var(--muted);font-size:13px}
+
+  /* panel */
+  .panel{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:16px;padding:18px;box-shadow: 0 6px 30px rgba(2,6,23,0.6);backdrop-filter: blur(8px);border:1px solid rgba(255,255,255,0.04)}
+  .sectionTitle{font-weight:700;margin-bottom:8px}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:10px}
+  input[type=number], select, textarea{width:100%;padding:10px;border-radius:10px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);outline:none;font-size:14px}
+  .controls-row{display:flex;gap:8px}
+  .controls-row > *{flex:1}
+  .small{font-size:12px;color:var(--muted);margin-top:6px}
+
+  button.primary{margin-top:12px;padding:10px 14px;border-radius:12px;border:0;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#021022;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(139,92,246,0.18);transition:transform .18s}
+  button.primary:active{transform:translateY(1px) scale(.998)}
+
+  .hint{font-size:12px;color:rgba(230,238,248,0.6);margin-top:10px}
+
+  /* right column */
+  .topRow{display:flex;gap:16px;align-items:stretch;margin-bottom:16px;flex-wrap:wrap}
+  .card{flex:1;padding:14px;border-radius:12px;background:var(--card);border:1px solid rgba(255,255,255,0.03);position:relative;overflow:hidden}
+  .bigNum{font-size:22px;font-weight:800}
+  .muted{color:var(--muted);font-size:13px}
+
+  /* chart area */
+  #chartCanvas{width:100%;height:220px;background:linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.01));border-radius:10px;padding:8px;display:block}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:8px;text-align:right;border-bottom:1px dashed rgba(255,255,255,0.03);font-size:13px}
+  th{color:var(--muted);font-weight:600}
+
+  /* log */
+  .log{max-height:220px;overflow:auto;font-size:13px;padding:10px;border-radius:10px;background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent);border:1px solid rgba(255,255,255,0.02)}
+
+  /* apple game & mini-live (added) */
+  .mini-card {grid-column:1/-1}
+  .apple-game{margin-top:12px;text-align:center}
+  .grid{display:grid;grid-template-columns:repeat(5,56px);gap:8px;justify-content:center;margin-top:10px}
+  .cell{width:56px;height:56px;background:rgba(255,255,255,0.06);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px}
+  .start-btn{margin-top:12px;padding:8px 16px;border:none;border-radius:8px;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:#fff;font-weight:600;font-size:14px;cursor:pointer}
+  .start-btn:active{transform:scale(0.98)}
+
+  /* responsive tweaks */
+  @media (max-width:1100px){
+    .wrap{max-width:1000px;padding:20px}
+  }
+  @media (max-width:980px){
+    .wrap{grid-template-columns:1fr;padding:16px}
+    .logo{width:56px;height:56px}
+    header h1{font-size:18px}
+    #chartCanvas{height:200px}
+    .grid{grid-template-columns:repeat(5,1fr);max-width:320px;margin:auto}
+    .cell{width:100%;aspect-ratio:1/1;font-size:20px}
+    th,td{font-size:12px;padding:6px}
+    .topRow{flex-direction:column}
+  }
+  @media (max-width:640px){
+    header{flex-direction:column;align-items:flex-start;gap:8px}
+    header h1{font-size:16px}
+    header p{font-size:12px}
+    .wrap{padding:12px;margin:12px}
+    #bgCanvas{opacity:0.22}
+    .card{padding:12px}
+    .mini-card{padding:10px}
+    #chartCanvas{height:170px}
+    .log{max-height:180px}
+  }
+  @media (max-width:420px){
+    .grid{grid-template-columns:repeat(5,1fr);gap:6px}
+    .cell{font-size:18px;border-radius:6px}
+    .logo{width:48px;height:48px}
+    .bigNum{font-size:20px}
+    .muted{font-size:12px}
+    header h1{font-size:15px}
+  }
+
+  /* subtle float animation for cards */
+  @keyframes floaty {0%{transform:translateY(0)}50%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+</style>
+
 </head>
 <body>
-<h1>اسكريبت التفاحة</h1>
+<canvas id="bgCanvas"></canvas>  <div class="wrap">
+  <header>
+    <div class="logo">CR</div>
+    <div>
+      <h1>متنبئ لعبة <span style="color:var(--accent2)">Apple</span> — تحليلي</h1>
+      <p>تقدير احتمالات من التاريخ الأخير، حساب القيمة المتوقعة (EV)، واقتراح نقطة سحب.</p>
+    </div>
+  </header>
+   <!-- NOTE: 'إعدادات وتغذية البيانات' panel was removed as requested -->    <!-- Inserted: Mini live card (chart + single-row table + Apple game) -->
+  <div class="card mini-card">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="muted">توقعات السيرفر — عرض حي (مصغّر)</div>
+        <div style="font-weight:700;margin-top:6px">قيم مدروسه</div>
+      </div>
+      <div class="muted">محدث كل ثانية</div>
+    </div>  <div style="margin-top:12px">
+  <canvas id="miniChart" style="width:100%;height:160px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);border-radius:8px;display:block"></canvas>
+</div>
 
-<div class="game-container">
-  <div class="grid" id="grid"></div>
-  <div class="multipliers">
-    <div class="multiplier">x349.68</div>
-    <div class="multiplier">x69.93</div>
-    <div class="multiplier">x27.97</div>
-    <div class="multiplier">x11.18</div>
-    <div class="multiplier">x6.71</div>
-    <div class="multiplier">x4.02</div>
-    <div class="multiplier">x2.41</div>
-    <div class="multiplier">x1.93</div>
-    <div class="multiplier">x1.54</div>
-    <div class="multiplier">x1.23</div>
+<div style="margin-top:12px">
+  <table style="direction:ltr;text-align:center">
+    <thead>
+      <tr><th style="text-align:center">الوقت</th><th style="text-align:center">القيمة</th></tr>
+    </thead>
+    <tbody id="miniDataTable">
+      <!-- single row will be updated in-place -->
+    </tbody>
+  </table>
+</div>
+
+<div class="apple-game" style="margin-top:12px">
+  <div style="font-weight:700">Apple of Fortune 🍎</div>
+  <div class="grid" id="appleGridMini">
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+  </div>
+  <button class="start-btn" id="startAppleMini">Start</button>
+</div>
+
+  </div>    <!-- right: results (unchanged) -->
+  <div>
+    <div class="topRow">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="muted">التقدير الحالي (k)</div>
+            <div id="kVal" class="bigNum">—</div>
+          </div>
+          <div>
+            <div class="muted">احتمال الوصول لمضاعف</div>
+            <div id="probVal" class="bigNum">—</div>
+          </div>
+          <div>
+            <div class="muted">نقطة السحب المقترحة</div>
+            <div id="bestC" class="bigNum">—</div>
+          </div>
+        </div>  <div style="margin-top:10px">
+      <table>
+        <tr><th>رصيد</th><td id="balDisplay">—</td></tr>
+        <tr><th>رهان</th><td id="betDisplay">—</td></tr>
+        <tr><th>EV عند النقطة المقترحة</th><td id="evDisplay">—</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="flex:0.9">
+    <div class="muted">مخطط رصيد/تاريخ المضاعفات</div>
+    <canvas id="chartCanvas"></canvas>
   </div>
 </div>
 
-<div class="buttons">
-  <button class="button" onclick="activateGame()">ابدأ</button>
-  <button class="button" onclick="startWithPopup()">ابدأ من الأول</button>
+<div class="card" style="margin-bottom:12px">
+  <div class="sectionTitle">تفاصيل التحليل</div>
+  <div id="analysisText" class="muted">لا بيانات بعد.</div>
+  <div style="margin-top:12px">
+    <div class="muted">أفضل 5 خيارات حسب EV:</div>
+    <table id="bestTable"><thead><tr><th>مضاعف (c)</th><th>احتمال P>=c</th><th>EV لكل وحدة</th></tr></thead><tbody></tbody></table>
+  </div>
 </div>
 
-<div id="popup">
-  <div>CONNECTING TO SERVERS</div>
-  <p>لو الاسكريبت مطلع النتايج غلط جرب في وقت تاني<br>عشان حاليا في ضغط على السيرفر</p>
+<div class="card">
+  <div class="sectionTitle">سجل المحاكاة / أحداث</div>
+  <div id="log" class="log">متصل بنجاح
+  برموكود NEROVIP
+  https://t.me/nerovipbet.</div>
 </div>
 
-<script>
-  const grid = document.getElementById("grid");
-  const popup = document.getElementById("popup");
-  const rows = 10;
-  const cols = 5;
-  const total = rows * cols;
-  const cells = [];
-  let gameInterval = null;
-  let currentGlow = null;
+  </div>    <div class="glowAccent"></div>
+</div>  <script>
+/* ---------- Particle background (subtle) ---------- */
+const bg = document.getElementById('bgCanvas');
+bg.width = innerWidth;
+bg.height = innerHeight;
+const gctx = bg.getContext('2d');
+let particles = [];
+for(let i=0;i<90;i++){
+  particles.push({
+    x: Math.random()*bg.width,
+    y: Math.random()*bg.height,
+    r: 1+Math.random()*2.5,
+    vx: (Math.random()-0.5)*0.25,
+    vy: (Math.random()-0.5)*0.25,
+    hue: 180 + Math.random()*160
+  });
+}
+function drawBG(){
+  gctx.clearRect(0,0,bg.width,bg.height);
+  particles.forEach(p=>{
+    p.x += p.vx;
+    p.y += p.vy;
+    if(p.x<0)p.x=bg.width;
+    if(p.x>bg.width)p.x=0;
+    if(p.y<0)p.y=bg.height;
+    if(p.y>bg.height)p.y=0;
+    const grd = gctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*12);
+    grd.addColorStop(0, `hsla(${p.hue},90%,60%,0.12)`);
+    grd.addColorStop(1, `hsla(${p.hue},80%,50%,0)`);
+    gctx.fillStyle = grd;
+    gctx.beginPath();
+    gctx.arc(p.x,p.y,p.r*8,0,Math.PI*2);
+    gctx.fill();
+  });
+  requestAnimationFrame(drawBG);
+}
+drawBG();
+window.addEventListener('resize', ()=>{bg.width=innerWidth;bg.height=innerHeight});
 
-  function createGrid() {
-    grid.innerHTML = "";
-    cells.length = 0;
-    for (let i = 0; i < total; i++) {
-      const cell = document.createElement("div");
-      cell.classList.add("cell");
-      grid.appendChild(cell);
-      cells.push(cell);
+/* ---------- Utility ---------- */
+const $ = id => document.getElementById(id);
+function parseHistory(text){
+  const arr = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(Number).filter(n=>!isNaN(n) && isFinite(n) && n>=1);
+  return arr;
+}
+
+/* ---------- Pareto estimator ---------- */
+function estimateParetoK(data){
+  // Use threshold xm = 1. MLE: k_hat = n / sum ln(m_i)
+  if (!data || data.length===0) return null;
+  const n = data.length;
+  let s = 0;
+  for(const m of data) s += Math.log(m);
+  if (s <= 0) return null;
+  const k = n / s;
+  return k;
+}
+
+/* ---------- probability P(M>=c) under Pareto with xm=1 ---------- */
+function probGE(c,k){
+  if (c<=1) return 1;
+  return Math.pow(c, -k);
+}
+
+/* ---------- EV per unit bet when cashing out at c ---------- */
+function EV_at_c(c,k){
+  const P = probGE(c,k);
+  return P * (c - 1) - (1 - P); // = P*c - 1
+}
+
+/* ---------- UI / interaction (original elements) ---------- */
+const historyTA = $('history'); // note: this element removed from DOM; parseHistory calls guarded where used
+const loadSampleBtn = $('loadSample');
+const analyzeBtn = $('analyze');
+const simulateBtn = $('simulate');
+
+const kVal = $('kVal'), probVal = $('probVal'), bestC = $('bestC');
+const balDisplay = $('balDisplay'), betDisplay = $('betDisplay'), evDisplay = $('evDisplay');
+const analysisText = $('analysisText'), bestTable = $('bestTable').querySelector('tbody');
+const logDiv = $('log');
+const chartCanvas = $('chartCanvas');
+chartCanvas.width = chartCanvas.clientWidth * devicePixelRatio;
+chartCanvas.height = chartCanvas.clientHeight * devicePixelRatio;
+const cctx = chartCanvas.getContext('2d');
+cctx.scale(devicePixelRatio, devicePixelRatio);
+
+// sample dataset (synthetic heavy-tail)
+const sampleData = [1.02,1.01,1.00,1.05,1.02,2.5,1.00,1.01,1.06,3.2,1.00,1.00,1.5,1.12,1.03,1.02,5.4,1.01,1.00,1.04,2.0,1.02,1.01,8.7,1.00,1.01];
+
+// Note: loadSampleBtn/analyzeBtn/simulateBtn refer to elements removed from DOM.
+// To avoid runtime errors, check existence before attaching.
+if (loadSampleBtn) {
+  loadSampleBtn.addEventListener('click', ()=>{
+    historyTA.value = sampleData.join('\n');
+    log("تم تحميل بيانات العيّنة.");
+  });
+}
+if (analyzeBtn) {
+  analyzeBtn.addEventListener('click', ()=>{
+    const raw = historyTA.value.trim();
+    const arr = parseHistory(raw);
+    if (arr.length===0){
+      alert('أدخل بيانات تاريخية صحيحة أو حمّل بيانات عيّنة.');
+      return;
     }
-  }
-
-  function activateGame() {
-    clearInterval(gameInterval);
-    createGrid();
-
-    let currentRow = rows - 1;
-    let revealed = 0;
-    const maxReveals = 6;
-
-    function revealRow(rowIndex) {
-      const col = Math.floor(Math.random() * cols);
-      const index = rowIndex * cols + col;
-
-      setTimeout(() => {
-        if (currentGlow) currentGlow.classList.remove("next");
-        currentGlow = cells[index];
-        currentGlow.classList.add("next");
-
-        setTimeout(() => {
-          currentGlow.classList.remove("next");
-          currentGlow.classList.add("revealed");
-        }, 1000);
-      }, 400);
+    // use last up to 200 values
+    const data = arr.slice(-200);
+    const k = estimateParetoK(data);
+    if (!k || !isFinite(k)){
+      alert('فشل في تقدير k — تأكد أن القيم صحيحة.');
+      return;
+    }
+    const cmin = Math.max(1.01, parseFloat($('cmin').value) || 1.01);
+    const cmax = Math.max(cmin+0.01, parseFloat($('cmax').value) || 50);
+    // scan for best EV across grid
+    let best = {c: cmin, ev: -Infinity, P:0};
+    const candidates = [];
+    for(let c = cmin; c <= cmax; c = Math.round((c+0.01)*100)/100){
+      const P = probGE(c,k);
+      const ev = EV_at_c(c,k);
+      candidates.push({c, P, ev});
+      if (ev > best.ev) best = {c, ev, P};
+      if (c > 200) break; // safety
     }
 
-    revealRow(currentRow);
-    currentRow--;
-    revealed++;
+    // update UI
+    kVal.textContent = k.toFixed(4);
+    probVal.textContent = '—';
+    bestC.textContent = best.c.toFixed(2);
+    balDisplay.textContent = parseFloat($('balance')?.value || 0).toFixed(2);
+    betDisplay.textContent = parseFloat($('baseBet')?.value || 0).toFixed(2);
+    evDisplay.textContent = (best.ev> -0.5e9 ? best.ev.toFixed(4) : '—');
 
-    gameInterval = setInterval(() => {
-      if (revealed >= maxReveals) {
-        clearInterval(gameInterval);
-        return;
+    // formatted analysis text
+    analysisText.innerHTML = `
+      تم استخدام آخر <b>${data.length}</b> نتيجة لحساب معامل الشكل (k). <br>
+      التقدير: <b>k = ${k.toFixed(4)}</b>. <br>
+      التفسير: كلما اقترب k من الصفر زاد "ثِقل الذيل" (احتمالات لمضاعفات كبيرة أعلى).
+    `;
+
+    // fill best 5
+    bestTable.innerHTML = '';
+    candidates.sort((a,b)=>b.ev - a.ev);
+    candidates.slice(0,8).forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.c.toFixed(2)}x</td><td>${(r.P*100).toFixed(3)}%</td><td>${r.ev.toFixed(4)}</td>`;
+      bestTable.appendChild(tr);
+    });
+
+    // compute prob at the best c
+    probVal.textContent = (best.P*100).toFixed(3) + '%';
+
+    // draw chart: history + EV line
+    drawChart(data, k, best.c);
+
+    log(`تم التحليل — k=${k.toFixed(4)} — أفضل c=${best.c.toFixed(2)} — EV=${best.ev.toFixed(4)}`);
+  });
+}
+if (simulateBtn) {
+  simulateBtn.addEventListener('click', ()=>{
+    const raw = historyTA.value.trim();
+    const arr = parseHistory(raw);
+    if (arr.length===0){ alert('أدخل بيانات تاريخية صحيحة أو حمّل بيانات عيّنة.'); return; }
+    const data = arr.slice(-200);
+    const k = estimateParetoK(data);
+    const cmin = Math.max(1.01, parseFloat($('cmin').value) || 1.01);
+    const cmax = Math.max(cmin+0.01, parseFloat($('cmax').value) || 50);
+    // pick best c as earlier
+    let best = {c:cmin, ev:-Infinity, P:0};
+    for(let c=cmin;c<=cmax;c=Math.round((c+0.01)*100)/100){
+      const ev = EV_at_c(c,k);
+      const P = probGE(c,k);
+      if (ev > best.ev) best = {c,ev,P};
+      if (c>200) break;
+    }
+    const rounds = parseInt($('rounds')?.value) || 500;
+    let balance = parseFloat($('balance')?.value) || 1000;
+    const baseBet = parseFloat($('baseBet')?.value) || 1;
+    const histBal = [balance];
+
+    // RNG sample from Pareto(xm=1): M = U^{-1/k}
+    function samplePareto(k){
+      const u = Math.random();
+      return Math.pow(u, -1/k);
+    }
+
+    let wins=0, losses=0;
+    for(let i=0;i<rounds;i++){
+      const bet = Math.min(baseBet, balance);
+      const m = samplePareto(k);
+      if (m >= best.c){
+        // win
+        const profit = bet * (best.c - 1);
+        balance += profit;
+        wins++;
+      } else {
+        balance -= bet;
+        losses++;
       }
-      revealRow(currentRow);
-      currentRow--;
-      revealed++;
-    }, 4500);
+      histBal.push(balance);
+      if (balance <= 0) break;
+    }
+
+    // update UI summary
+    log(`محاكاة ${rounds} جولات عند c=${best.c.toFixed(2)} => نهاية الرصيد ${balance.toFixed(2)} (فوز: ${wins}, خسارة: ${losses})`);
+    balDisplay.textContent = balance.toFixed(2);
+    evDisplay.textContent = best.ev.toFixed(4);
+    drawSimChart(histBal);
+  });
+}
+
+ // logging helper
+function log(msg){
+  const t = new Date().toLocaleTimeString();
+  logDiv.innerHTML = `<div style="padding:6px 0;border-bottom:1px dashed rgba(255,255,255,0.03)"><b style="color:var(--muted)">${t}</b> — ${msg}</div>` + logDiv.innerHTML;
+}
+
+/* ---------- drawing functions ---------- */
+function drawChart(historyData, k, bestCval){
+  const w = chartCanvas.clientWidth;
+  const h = chartCanvas.clientHeight;
+  cctx.clearRect(0,0,w,h);
+
+  // background gradient
+  const g = cctx.createLinearGradient(0,0,w,0);
+  g.addColorStop(0,'rgba(139,92,246,0.06)');
+  g.addColorStop(1,'rgba(6,182,212,0.03)');
+  cctx.fillStyle = g;
+  cctx.fillRect(0,0,w,h);
+
+  // plot histogram of multipliers (simple)
+  const bins = 40;
+  const maxX = Math.min( Math.max(...historyData), 20);
+  const counts = new Array(bins).fill(0);
+  historyData.forEach(v=>{
+    const x = Math.min(v, maxX);
+    const idx = Math.floor((x-1)/(maxX-1) * (bins-1));
+    if(idx>=0 && idx<bins) counts[idx]++;
+  });
+  const maxC = Math.max(...counts) || 1;
+  cctx.fillStyle = 'rgba(255,255,255,0.08)';
+  for(let i=0;i<bins;i++){
+    const bw = w/bins;
+    const bh = (counts[i]/maxC) * (h*0.6);
+    cctx.fillRect(i*bw + 1, h - bh - 20, bw - 2, bh);
   }
 
-  function startWithPopup() {
-    popup.style.display = "flex";
-    setTimeout(() => {
-      popup.style.display = "none";
-      activateGame();
-    }, 5000);
+  // draw bestC vertical line
+  const X = Math.min(Math.max(bestCval,1.01), 20);
+  const xPos = ((X - 1) / (20 - 1)) * w;
+  cctx.beginPath();
+  cctx.moveTo(xPos, 8);
+  cctx.lineTo(xPos, h - 8);
+  cctx.strokeStyle = 'rgba(246,146,35,0.9)';
+  cctx.lineWidth = 2;
+  cctx.setLineDash([6,6]);
+  cctx.stroke();
+  cctx.setLineDash([]);
+
+  cctx.fillStyle = 'rgba(230,238,248,0.9)';
+  cctx.font = '12px Inter';
+  cctx.fillText(`أفضل اقتراح: ${bestCval.toFixed(2)}x`, Math.min(w-160, Math.max(8, xPos+8)), 20);
+}
+
+function drawSimChart(balances){
+  // small sparkline
+  const w = chartCanvas.clientWidth;
+  const h = chartCanvas.clientHeight;
+  cctx.clearRect(0,0,w,h);
+  cctx.fillStyle = 'rgba(255,255,255,0.02)';
+  cctx.fillRect(0,0,w,h);
+
+  const data = balances;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const pad = (max - min) * 0.12 || 1;
+  cctx.beginPath();
+  data.forEach((v,i)=>{
+    const x = (i/(data.length-1))*(w-16) + 8;
+    const y = h - 12 - ((v - (min - pad)) / ((max + pad)-(min - pad))) * (h - 28);
+    if(i===0) cctx.moveTo(x,y); else cctx.lineTo(x,y);
+  });
+  cctx.strokeStyle = 'rgba(139,92,246,0.95)';
+  cctx.lineWidth = 2.2;
+  cctx.stroke();
+
+  // end value
+  cctx.fillStyle = 'rgba(230,238,248,0.95)';
+  cctx.font = '13px Inter';
+  cctx.fillText(`رصيد نهائي: ${data[data.length-1].toFixed(2)}`, 10, 18);
+}
+
+// initial small hint
+analysisText.innerHTML = "أدخل بيانات سابقة أو اضغط \"تحميل بيانات عيّنة\" ثم اضغط \"تحليل وتنبؤ\".";
+log("واجهة جاهزة. هذه أداة للتحليل فقط — لا ضمان لنتائج حقيقية.");
+
+/* ------------------ MINI LIVE (chart + single-row table + apple) ------------------ */
+/* Using distinct IDs to avoid conflicts with original chart */
+(function(){
+  // mini chart setup
+  const miniCanvas = document.getElementById('miniChart');
+  const mctx = miniCanvas.getContext('2d');
+  // set pixel ratio for crispness
+  function resizeMini(){
+    miniCanvas.width = miniCanvas.clientWidth * devicePixelRatio;
+    miniCanvas.height = miniCanvas.clientHeight * devicePixelRatio;
+    mctx.setTransform(1,0,0,1,0,0);
+    mctx.scale(devicePixelRatio, devicePixelRatio);
+  }
+  resizeMini();
+  window.addEventListener('resize', ()=>{   
+    // reset transform then resize
+    mctx.setTransform(1,0,0,1,0,0);
+    resizeMini();
+  });
+
+  const miniTable = document.getElementById('miniDataTable');
+  let miniLabels = [];
+  let miniData = [];
+
+  function drawMini(){
+    const w = miniCanvas.clientWidth;
+    const h = miniCanvas.clientHeight;
+    mctx.clearRect(0,0,w,h);
+
+    // background
+    const g = mctx.createLinearGradient(0,0,w,0);
+    g.addColorStop(0, 'rgba(139,92,246,0.06)');
+    g.addColorStop(1, 'rgba(6,182,212,0.03)');
+    mctx.fillStyle = g;
+    mctx.fillRect(0,0,w,h);
+
+    if (miniData.length < 1) return;
+
+    const maxVal = Math.max(...miniData, 20);
+    const minVal = 0;
+    mctx.beginPath();
+    mctx.lineWidth = 2;
+    mctx.strokeStyle = 'rgba(139,92,246,0.95)';
+    miniData.forEach((val, i) => {
+      const x = (i / (miniData.length - 1)) * (w - 20) + 10;
+      const y = h - ((val - minVal) / (maxVal - minVal)) * (h - 20) - 10;
+      if (i === 0) mctx.moveTo(x, y); else mctx.lineTo(x, y);
+    });
+    mctx.stroke();
   }
 
-  createGrid();
-</script>
-</body>
+  // update single-row table and mini data arrays
+  function addMiniValue(){
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
+    const value = (Math.random() * (20 - 1) + 1).toFixed(2);
+
+    miniLabels.push(timeStr);
+    miniData.push(parseFloat(value));
+    if (miniLabels.length > 30) { miniLabels.shift(); miniData.shift(); }
+
+    // single-row table: create once then update
+    if (miniTable.rows.length === 0) {
+      const r = document.createElement('tr');
+      r.innerHTML = `<td style="text-align:center">${timeStr}</td><td style="text-align:center">${value}</td>`;
+      miniTable.appendChild(r);
+    } else {
+      miniTable.rows[0].cells[0].textContent = timeStr;
+      miniTable.rows[0].cells[1].textContent = value;
+    }
+
+    drawMini();
+  }
+
+  // start updates every 1s
+  addMiniValue();
+  const miniInterval = setInterval(addMiniValue, 1000);
+
+  // Apple game (mini) logic
+  const appleCells = document.querySelectorAll('#appleGridMini .cell');
+  const startAppleBtn = document.getElementById('startAppleMini');
+  startAppleBtn.addEventListener('click', ()=> {
+    appleCells.forEach(c => c.textContent = '');
+    const randomIndex = Math.floor(Math.random() * appleCells.length);
+    appleCells[randomIndex].textContent = '🍎';
+  });
+
+})(); // end mini live IIFE
+
+// end of script
+</script>  </body>
 </html>
